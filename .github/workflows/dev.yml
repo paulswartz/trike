@@ -1,0 +1,56 @@
+name: Deploy to Dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+jobs:
+  Build:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - uses: mbta/actions/build-push-ecr@v1
+        id: build-push
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          docker-repo: ${{ secrets.DOCKER_REPO }}
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: dev
+    concurrency: dev
+    needs: build
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Calculate Docker tag
+        id: docker
+        run: |
+          echo "::set-output name=tag::git-$(git rev-parse --short HEAD)"
+      - name: Deploy to hsctd-dev
+        id: deploy
+        run: |
+          echo "::set-output name=command_id::$(jq -r .Command.CommandId document-output.json)"
+          aws ssm send-command --document-name "ps-pull-ecr-stack-deploy" --document-version "\$LATEST" --targets '[{"Key":"resource-groups:Name","Values":["hsctd-dev-managers"]}]' --parameters '{"ECRRepo":["${{ secrets.DOCKER_REPO }}"],"DockerTag":["${{ steps.docker.outputs.tag }}"],"TaskCpu":["0.25"], "TaskMemory": ["128M"], "TaskPort": ["8001"], "ServiceName":["trike_dev"],"EnvironmentSecret":["trike-dev-environment"],"SplunkURL":["${{ secrets.SPLUNK_HOST }}"],"SplunkIndex":["trike-dev"],"SplunkTokenSecret":["${{ secerets.SPLUNK_TOKEN_ARN }}"]}' --timeout-seconds 600 --max-concurrency "1" --max-errors "0" --region us-east-1 | tee document-output.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Check if deploy started
+        if: steps.deploy.outputs.command_id == ''
+        run: exit 1
+      - name: Wait for command to finish
+        if: steps.deploy.outputs.command_id != ''
+        run: bash .github/await_command_finish.sh hsctd-dev-managers ${{ steps.deploy.outputs.command_id }} DockerStackDeploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # - uses: mbta/actions/notify-slack-deploy@v1
+      #   if: ${{ !cancelled() }}
+      #   with:
+      #     webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+      #     job-status: ${{ job.status }}
