@@ -3,7 +3,7 @@ ARG FROM_IMAGE=mcr.microsoft.com/windows/servercore:1809
 
 FROM $BUILD_IMAGE as build
 
-ENV MIX_ENV=prod
+ENV MIX_ENV=dev
 
 # log which version of Windows we're using
 RUN ver
@@ -25,7 +25,7 @@ COPY mix.exs mix.lock ./
 RUN mix deps.get
 
 COPY config/config.exs config\\config.exs
-COPY config/prod.exs config\\prod.exs
+COPY config/dev.exs config\\dev.exs
 
 RUN mix deps.compile
 
@@ -40,7 +40,7 @@ RUN curl -fSLo C:\vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.e
     && .\vc_redist.x64.exe /install /quiet /norestart \
     && del vc_redist.x64.exe
 
-COPY --from=build C:\\trike\\_build\\prod\\rel\\trike C:\\trike
+COPY --from=build C:\\trike\\_build\\dev\\rel\\trike C:\\trike
 
 WORKDIR C:\\trike
 
