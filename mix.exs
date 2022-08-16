@@ -33,7 +33,6 @@ defmodule Trike.MixProject do
     [
       {:ranch, "~> 2.0"},
       {:ehmon, git: "https://github.com/mbta/ehmon.git"},
-      {:logger_splunk_backend, "~> 2.0.0"},
       {:jason, "~> 1.2"},
       {:tzdata, "~> 1.1"},
       {:ex_aws, "~> 2.2"},
