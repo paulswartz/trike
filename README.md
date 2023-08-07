@@ -2,6 +2,7 @@
 
 Trike is a simple application in the spirit of [socket_proxy](https://github.com/mbta/socket_proxy) consisting of a [Ranch protocol](https://ninenines.eu/docs/en/ranch/2.1/guide/protocols/) that listens on a TCP socket for packets in the OCS (Operations Control System) message format, parses them into a structured [CloudEvent](https://cloudevents.io/), and forwards them to an [AWS Kinesis Data Stream](https://aws.amazon.com/kinesis/data-streams/).
 
+
 # Development
 - Clone this repo.
 - Install [asdf](https://asdf-vm.com/guide/getting-started.html#_1-install-dependencies).
